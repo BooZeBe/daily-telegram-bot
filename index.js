@@ -3,6 +3,8 @@ const TelegramBot = require('node-telegram-bot-api') // telegram bot library
 const mongoose = require('mongoose') // mongodb library
 const schedule = require('node-schedule') // time library https://www.npmjs.com/package/node-schedule - desc and docs
 
+const searchInTimezones = require('./timezone_database')
+
 require('dotenv').config() // .env
 require('./models/user.model') // user model for db
 
@@ -128,15 +130,14 @@ const start = () => {
         await getDataFromDBByChatId(queryForDB, chatId)
 
         await bot.sendMessage(chatId, 'Hello, my name is Daily Bot. I am your daily helper. You make a to-do list and then every day I remind you of your business')
-        await bot.sendMessage(chatId, 'At FIRST. I need your timezone for correctly time working. You don\'t want a message at 3:00 of night right?' +
-          '\nYou can look for your timezone here - https://en.wikipedia.org/wiki/List_of_tz_database_time_zones',
+        await bot.sendMessage(chatId, 'At FIRST. I need your city for correctly time working. You don\'t want a message at 3:00 of night right?',
 
           createAKeyboard(false,[
-            "FOR EXAMPLE:",
-            "Asia/Bishkek",
-            "Europe/Moscow",
-            "Europe/Kiev",
-            "America/Tijuan"
+            'FOR EXAMPLE:',
+            'Bishkek',
+            'Moscow',
+            'Kiev',
+            'Tokyo'
           ]))
           .then(() => {
             status = SETTING_TIMEZONE
@@ -145,16 +146,15 @@ const start = () => {
       case '/setnewtimezone': // set new tz
         await getDataFromDBByChatId(queryForDB, chatId)
 
-        await bot.sendMessage(chatId, 'Your current timezone is ' + `${tz}` +
-          '\n' +
-          '\nYou can look for your timezone here - https://en.wikipedia.org/wiki/List_of_tz_database_time_zones',
+        await bot.sendMessage(chatId, 'Your current timezone is ' + `${tz}\n` +
+          'Type your new city to change it',
 
-          createAKeyboard(false, [
-            "FOR EXAMPLE:",
-            "Asia/Bishkek",
-            "Europe/Moscow",
-            "Europe/Kiev",
-            "America/Tijuan"
+          createAKeyboard(false,[
+            'FOR EXAMPLE:',
+            'Bishkek',
+            'Moscow',
+            'Kiev',
+            'Tokyo'
           ]))
           .then(() => {
             status = SETTING_TIMEZONE
@@ -192,8 +192,8 @@ const start = () => {
       default: // all messages which do not start with '/'
         switch (status) {
           case SETTING_TIMEZONE: // /start and /settimezone
-            if (/\w+\/\w+/g.test(msg.text)) {
-              await setTimezoneInDB(queryForDB, msg.text)
+            if (searchInTimezones(msg.text) !== undefined) {
+              await setTimezoneInDB(queryForDB, searchInTimezones(msg.text))
               status = ''
               return bot.sendMessage(chatId, 'Done. If it is wrong just change it with /setnewtimezone function', {reply_markup: JSON.stringify({remove_keyboard: true})})
             } else {
